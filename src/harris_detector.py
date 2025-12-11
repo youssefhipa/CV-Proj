@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 class HarrisDetector:
     """Enhanced Harris Corner Detector with various improvements"""
     
-    def __init__(self, k: float = 0.05, window_size: int = 3, 
-                 threshold_percent: float = 0.0005, nms_size: int = 3):
+    def __init__(self, k: float = 0.05, window_size: int = 5, 
+                 threshold_percent: float = 0.005, nms_size: int = 3):
         """
         Initialize Harris Detector
         
@@ -52,8 +52,7 @@ class HarrisDetector:
         
         return R
     
-    def detect(self, image: np.ndarray, return_response: bool = False,
-               max_keypoints: Optional[int] = None) -> List[Tuple[int, int, float]]:
+    def detect(self, image: np.ndarray, return_response: bool = False) -> List[Tuple[int, int, float]]:
         """
         Detect Harris corners in an image
         
@@ -80,17 +79,6 @@ class HarrisDetector:
         
         # Create mask for strong corners
         strong_corners = (R >= threshold_value) & local_maxima
-        
-        # If still too few, fall back to top-N strongest local maxima
-        if max_keypoints is not None:
-            coords = np.argwhere(local_maxima)
-            responses = R[local_maxima]
-            if len(responses) > max_keypoints:
-                top_idx = np.argpartition(responses, -max_keypoints)[-max_keypoints:]
-                mask = np.zeros_like(local_maxima, dtype=bool)
-                top_coords = coords[top_idx]
-                mask[top_coords[:, 0], top_coords[:, 1]] = True
-                strong_corners = strong_corners | mask
         
         # 5. Extract keypoints
         keypoints = []
