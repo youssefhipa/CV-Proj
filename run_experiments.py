@@ -86,7 +86,8 @@ def run_basic_detection():
     print("="*50)
     
     # Initialize detectors
-    harris = HarrisDetector(k=0.05, window_size=5, threshold_percent=0.001)
+    # Loosened Harris threshold to better match SIFT keypoint counts
+    harris = HarrisDetector(k=0.05, window_size=3, threshold_percent=0.0005, nms_size=3)
     sift = SIFTDetector()
     visualizer = Visualizer()
     

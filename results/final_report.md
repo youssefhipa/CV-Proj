@@ -1,7 +1,7 @@
 # Computer Vision Project Report
 ## Comparative Evaluation of Harris Corner Detector and SIFT Keypoint Detector
 
-**Date:** 2025-12-08 13:32:09
+**Date:** 2025-12-11 22:28:00
 **Images Processed:** 5
 
 ---
@@ -10,13 +10,13 @@
 
 ### Summary Statistics:
 - **Total Harris Keypoints:** 292
-- **Total SIFT Keypoints:** 61,305
+- **Total SIFT Keypoints:** 61,308
 - **Average per Image:**
   - Harris: 58.4 keypoints
-  - SIFT: 12261.0 keypoints
+  - SIFT: 12261.6 keypoints
 - **Range (min-max):**
   - Harris: 38 - 88
-  - SIFT: 3687 - 30052
+  - SIFT: 3686 - 30055
 
 ### Density Analysis:
 - **Harris Density:** 0.000026 keypoints/pixel
@@ -34,25 +34,25 @@
 
 | Transformation | Harris Repeatability | SIFT Repeatability | Winner |
 |----------------|---------------------|-------------------|--------|
-| Scale | 0.711 | 0.689 | **Harris** |
-| Rotation | 0.011 | 0.210 | **SIFT** |
-| Brightness | 0.669 | 0.771 | **SIFT** |
-| Blur | 0.510 | 0.510 | **Harris** |
-| Noise | 0.746 | 0.573 | **Harris** |
+| Scale | 0.632 | 0.717 | **SIFT** |
+| Rotation | 0.035 | 0.295 | **SIFT** |
+| Brightness | 0.617 | 0.661 | **SIFT** |
+| Blur | 0.365 | 0.576 | **SIFT** |
+| Noise | 0.757 | 0.591 | **Harris** |
 
 
 ### Overall Robustness:
-- **Harris Wins:** 3 out of 5 tests
-- **SIFT Wins:** 2 out of 5 tests
+- **Harris Wins:** 1 out of 5 tests
+- **SIFT Wins:** 4 out of 5 tests
 - **Average Repeatability:**
-  - Harris: 0.529
-  - SIFT: 0.550
+  - Harris: 0.481
+  - SIFT: 0.568
 
 ### Key Findings:
-1. **Scale Changes:** Harris performs better
+1. **Scale Changes:** SIFT performs better
 2. **Rotation:** SIFT performs better
 3. **Illumination:** SIFT performs better
-4. **Blur:** Harris performs better
+4. **Blur:** SIFT performs better
 5. **Noise:** Harris performs better
 
 ---

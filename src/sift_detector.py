@@ -58,18 +58,27 @@ class SIFTDetector:
         return keypoints, descriptors
     
     def draw_keypoints(self, image: np.ndarray, keypoints: List[cv2.KeyPoint], 
-                      color: Tuple = (0, 255, 0), flags: int = cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS) -> np.ndarray:
+                      color: Tuple = (0, 255, 0), max_points: int = 2000, radius: int = 2) -> np.ndarray:
         """
-        Draw SIFT keypoints on image
+        Draw SIFT keypoints as simple dots (no circles/scale lines)
         
         Args:
             image: Input image
             keypoints: List of SIFT keypoints
             color: Color for keypoints
-            flags: Drawing flags
+            max_points: Cap number of points to draw for clarity
+            radius: Dot radius in pixels
         """
         img_copy = image.copy()
-        cv2.drawKeypoints(image, keypoints, img_copy, color=color, flags=flags)
+        
+        # Keep strongest points if too many
+        if len(keypoints) > max_points:
+            keypoints = sorted(keypoints, key=lambda kp: kp.response, reverse=True)[:max_points]
+        
+        for kp in keypoints:
+            x, y = map(int, kp.pt)
+            cv2.circle(img_copy, (x, y), radius, color, thickness=-1)
+        
         return img_copy
     
     def get_keypoint_statistics(self, keypoints: List[cv2.KeyPoint]) -> Dict[str, Any]:
@@ -130,13 +139,10 @@ class SIFTDetector:
             kps = self.sift.detect(scaled_img, None)
             
             # Draw keypoints
-            img_kps = cv2.drawKeypoints(
-                cv2.cvtColor(scaled_img, cv2.COLOR_GRAY2BGR),
-                kps,
-                None,
-                color=(0, 255, 0),
-                flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
-            )
+            img_kps = cv2.cvtColor(scaled_img, cv2.COLOR_GRAY2BGR)
+            for kp in kps:
+                x, y = map(int, kp.pt)
+                cv2.circle(img_kps, (x, y), 2, (0, 255, 0), thickness=-1)
             
             axes[i].imshow(cv2.cvtColor(img_kps, cv2.COLOR_BGR2RGB))
             axes[i].set_title(f'Scale: {scale}\nKeypoints: {len(kps)}')
@@ -158,7 +164,10 @@ class SIFTDetector:
             detector = cv2.SIFT_create(contrastThreshold=ct)
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             kps = detector.detect(gray, None)
-            img_kps = cv2.drawKeypoints(image, kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+            img_kps = image.copy()
+            for kp in kps:
+                x, y = map(int, kp.pt)
+                cv2.circle(img_kps, (x, y), 2, (0, 255, 0), thickness=-1)
             axes[i].imshow(cv2.cvtColor(img_kps, cv2.COLOR_BGR2RGB))
             axes[i].set_title(f'ContrastThresh={ct}\nKeypoints={len(kps)}')
             axes[i].axis('off')
@@ -169,7 +178,10 @@ class SIFTDetector:
             detector = cv2.SIFT_create(edgeThreshold=et)
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             kps = detector.detect(gray, None)
-            img_kps = cv2.drawKeypoints(image, kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+            img_kps = image.copy()
+            for kp in kps:
+                x, y = map(int, kp.pt)
+                cv2.circle(img_kps, (x, y), 2, (0, 255, 0), thickness=-1)
             axes[i+3].imshow(cv2.cvtColor(img_kps, cv2.COLOR_BGR2RGB))
             axes[i+3].set_title(f'EdgeThresh={et}\nKeypoints={len(kps)}')
             axes[i+3].axis('off')
