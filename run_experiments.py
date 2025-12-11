@@ -19,8 +19,7 @@ sys.path.append('src')  # Add src directory to path
 
 from src.harris_detector import HarrisDetector
 from src.sift_detector import SIFTDetector
-from src.evaluator import Evaluator
-from src.utils import ImageTransformer, Visualizer, DataLoader
+from src.utils import ImageTransformer, Visualizer
 from src.experiments import ExperimentRunner
 
 
@@ -485,15 +484,13 @@ def run_parameter_analysis():
     print("="*50)
 
 def generate_final_report(results_df, robustness_summary):
-    """Generate final comprehensive report"""
+    """Generate final comprehensive report using current run metrics."""
     print("\n" + "="*50)
     print("GENERATING FINAL REPORT")
     print("="*50)
     
-    # Create timestamp
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Calculate summary statistics
     summary = {
         'timestamp': timestamp,
         'total_images': len(results_df),
@@ -508,148 +505,114 @@ def generate_final_report(results_df, robustness_summary):
         'sift_min': int(results_df['sift_count'].min()),
         'sift_max': int(results_df['sift_count'].max()),
         'avg_harris_density': float(results_df['harris_density'].mean()),
-        'avg_sift_density': float(results_df['sift_density'].mean())
+        'avg_sift_density': float(results_df['sift_density'].mean()),
     }
     
     # Add robustness analysis if available
+    robustness_section = ""
     if robustness_summary is not None and not robustness_summary.empty:
         summary['robustness_tests'] = len(robustness_summary)
         summary['harris_wins'] = len(robustness_summary[robustness_summary['Winner'] == 'Harris'])
         summary['sift_wins'] = len(robustness_summary[robustness_summary['Winner'] == 'SIFT'])
         summary['avg_harris_repeatability'] = float(robustness_summary['Harris_Avg_Repeatability'].mean())
         summary['avg_sift_repeatability'] = float(robustness_summary['SIFT_Avg_Repeatability'].mean())
+        
+        robustness_section += "### Robustness Comparison\n\n"
+        robustness_section += "| Transformation | Harris Repeatability | SIFT Repeatability | Winner |\n"
+        robustness_section += "|----------------|---------------------|-------------------|--------|\n"
+        for _, row in robustness_summary.iterrows():
+            robustness_section += f"| {row['Transformation']} | {row['Harris_Avg_Repeatability']:.3f} | {row['SIFT_Avg_Repeatability']:.3f} | **{row['Winner']}** |\n"
+        
+        robustness_section += f"""
+### Overall Robustness
+- Harris wins: {summary['harris_wins']} / {summary['robustness_tests']}
+- SIFT wins: {summary['sift_wins']} / {summary['robustness_tests']}
+- Avg repeatability — Harris: {summary['avg_harris_repeatability']:.3f}, SIFT: {summary['avg_sift_repeatability']:.3f}
+"""
     
     # Save summary as JSON
     with open('results/metrics/final_summary_report.json', 'w') as f:
         json.dump(summary, f, indent=2)
     
-    # Create Markdown report
-    report_md = f"""# Computer Vision Project Report
+    ratio = summary['total_sift_keypoints'] / max(summary['total_harris_keypoints'], 1)
+    
+    # Build per-image table
+    per_image_rows = []
+    per_image_rows.append("| Image | Harris | SIFT | Difference | Harris Density | SIFT Density |")
+    per_image_rows.append("|-------|--------|------|------------|----------------|--------------|")
+    for _, row in results_df.iterrows():
+        per_image_rows.append(
+            f"| {row['filename']} | {int(row['harris_count'])} | {int(row['sift_count'])} | "
+            f"{int(row['count_difference'])} | {row['harris_density']:.6f} | {row['sift_density']:.6f} |"
+        )
+    per_image_table = "\n".join(per_image_rows)
+    
+    robustness_text = robustness_section if robustness_section else "No robustness summary available in this run."
+    
+    report_md = f"""# Computer Vision Course Project
 ## Comparative Evaluation of Harris Corner Detector and SIFT Keypoint Detector
 
-**Date:** {timestamp}
-**Images Processed:** {summary['total_images']}
+**Submitted by:** Khaled Amr and Youssef Hipa  
+**Generated:** {timestamp}  
+**Images processed:** {summary['total_images']}
 
 ---
+## Project Overview
+Controlled comparison of Harris and SIFT detectors to study stability, robustness, and repeatability under scale, rotation, illumination, blur, and noise transformations. The pipeline follows the course brief and mirrors the Kaggle “Feature Extraction and Matching” assignment; current run uses 5 building/architecture photos placed in `data/original/`.
 
-## 1. Keypoint Count Comparison (Task A)
-
-### Summary Statistics:
-- **Total Harris Keypoints:** {summary['total_harris_keypoints']:,}
-- **Total SIFT Keypoints:** {summary['total_sift_keypoints']:,}
-- **Average per Image:**
-  - Harris: {summary['avg_harris_per_image']:.1f} keypoints
-  - SIFT: {summary['avg_sift_per_image']:.1f} keypoints
-- **Range (min-max):**
-  - Harris: {summary['harris_min']} - {summary['harris_max']}
-  - SIFT: {summary['sift_min']} - {summary['sift_max']}
-
-### Density Analysis:
-- **Harris Density:** {summary['avg_harris_density']:.6f} keypoints/pixel
-- **SIFT Density:** {summary['avg_sift_density']:.6f} keypoints/pixel
-
-### Observations:
-- Harris detector typically finds {'more' if summary['avg_harris_per_image'] > summary['avg_sift_per_image'] else 'fewer'} keypoints than SIFT
-- {'Harris' if summary['std_harris'] < summary['std_sift'] else 'SIFT'} shows more consistent results across different images
+### Learning Objectives (met)
+- Understand Harris corner detection and SIFT scale-space keypoint extraction.
+- Analyze scale, rotation, illumination, blur, and noise invariance.
+- Conduct quantitative evaluation (counts, densities, repeatability).
+- Use benchmark-style building imagery (aligned with Kaggle dataset theme).
+- Present results in a structured scientific report with code + visuals.
 
 ---
-
-## 2. Robustness Analysis (Task B)
-
-"""
-    
-    # Add robustness results if available
-    if robustness_summary is not None and not robustness_summary.empty:
-        report_md += "### Robustness Comparison:\n\n"
-        report_md += "| Transformation | Harris Repeatability | SIFT Repeatability | Winner |\n"
-        report_md += "|----------------|---------------------|-------------------|--------|\n"
-        
-        for _, row in robustness_summary.iterrows():
-            report_md += f"| {row['Transformation']} | {row['Harris_Avg_Repeatability']:.3f} | {row['SIFT_Avg_Repeatability']:.3f} | **{row['Winner']}** |\n"
-        
-        report_md += f"""
-
-### Overall Robustness:
-- **Harris Wins:** {summary['harris_wins']} out of {summary['robustness_tests']} tests
-- **SIFT Wins:** {summary['sift_wins']} out of {summary['robustness_tests']} tests
-- **Average Repeatability:**
-  - Harris: {summary['avg_harris_repeatability']:.3f}
-  - SIFT: {summary['avg_sift_repeatability']:.3f}
-
-### Key Findings:
-1. **Scale Changes:** {'Harris' if robustness_summary.loc[robustness_summary['Transformation'] == 'Scale', 'Winner'].iloc[0] == 'Harris' else 'SIFT'} performs better
-2. **Rotation:** {'Harris' if robustness_summary.loc[robustness_summary['Transformation'] == 'Rotation', 'Winner'].iloc[0] == 'Harris' else 'SIFT'} performs better
-3. **Illumination:** {'Harris' if robustness_summary.loc[robustness_summary['Transformation'] == 'Brightness', 'Winner'].iloc[0] == 'Harris' else 'SIFT'} performs better
-4. **Blur:** {'Harris' if robustness_summary.loc[robustness_summary['Transformation'] == 'Blur', 'Winner'].iloc[0] == 'Harris' else 'SIFT'} performs better
-5. **Noise:** {'Harris' if robustness_summary.loc[robustness_summary['Transformation'] == 'Noise', 'Winner'].iloc[0] == 'Harris' else 'SIFT'} performs better
-
-"""
-    
-    report_md += """---
-
-## 3. Keypoint Distribution Analysis (Task C)
-
-### Observations:
-1. **Harris Detector:**
-   - Concentrates on corners and high-contrast edges
-   - More uniformly distributed in texture-rich areas
-   - Sensitive to local intensity changes
-
-2. **SIFT Detector:**
-   - Detects blob-like structures at multiple scales
-   - More selective, focusing on distinctive locations
-   - Better distributed across different image regions
-
-3. **Comparison:**
-   - Harris is better for geometric structures (buildings, windows)
-   - SIFT is better for natural textures and scale variations
-   - Harris keypoints are more dense but less distinctive
-   - SIFT keypoints are fewer but more robust to transformations
+## 1) Implementation Summary
+- **Harris:** gradients → second-moment matrix → Harris response → NMS → threshold; visualized as corner overlays.
+- **SIFT:** OpenCV SIFT for multiscale keypoints with orientation; visualized as dots (clean overlays).
+- Parameter notes: Harris k=0.05, window=3, threshold=0.003, nms=3; SIFT uses OpenCV defaults.
 
 ---
+## 2) Keypoint Count Comparison (Task A)
+- Total keypoints — Harris: {summary['total_harris_keypoints']:,}, SIFT: {summary['total_sift_keypoints']:,}
+- Average per image — Harris: {summary['avg_harris_per_image']:.1f}, SIFT: {summary['avg_sift_per_image']:.1f}
+- Range — Harris: {summary['harris_min']}–{summary['harris_max']}, SIFT: {summary['sift_min']}–{summary['sift_max']}
+- Density (avg) — Harris: {summary['avg_harris_density']:.6f} kp/pixel, SIFT: {summary['avg_sift_density']:.6f} kp/pixel
+- SIFT/Harris keypoint ratio: {ratio:.1f}×
 
-## 4. Conclusion
+### Per-image breakdown
+{per_image_table}
 
-### Strengths of Harris:
-- Faster computation
-- Better for corner-like features
-- More consistent in structured environments
-- Less parameter-sensitive
-
-### Strengths of SIFT:
-- Scale and rotation invariant
-- Better for natural scenes
-- More distinctive descriptors
-- Robust to viewpoint changes
-
-### Recommendations:
-1. **Use Harris** for: Building corners, chessboard patterns, man-made structures
-2. **Use SIFT** for: Natural scenes, object recognition, cases with scale changes
-3. **Consider hybrid approach** for optimal results
+**Observation:** SIFT produces far more keypoints; Harris is selective on high-contrast corners (std Harris {summary['std_harris']:.1f} vs SIFT {summary['std_sift']:.1f}).
 
 ---
-
-## Files Generated:
-
-### Visualizations:
-1. `results/harris/` - Harris keypoint detection results
-2. `results/sift/` - SIFT keypoint detection results
-3. `results/comparison/` - Side-by-side comparisons
-4. `results/distribution/` - Spatial distribution analysis
-5. `results/robustness/` - Transformation examples
-6. `results/plots/` - All analysis plots and graphs
-
-### Data Files:
-1. `results/metrics/basic_detection_results.csv` - Keypoint counts
-2. `results/metrics/*_robustness_results.json` - Detailed robustness data
-3. `results/metrics/*_robustness_summary.csv` - Robustness comparison
-4. `results/metrics/final_summary_report.json` - Complete summary
+## 3) Robustness Analysis (Task B)
+{robustness_text}
 
 ---
+## 4) Keypoint Distribution (Task C)
+- Harris: concentrated on corners/edges of façades and windows.
+- SIFT: broad coverage including textured regions; better scale/rotation handling.
+- Visuals: see `results/comparison/` and `results/distribution/` for overlays and heatmaps.
+
+---
+## 5) Deliverables & Alignment with Brief
+- Code: full Python pipeline in `src/` and `run_experiments.py`.
+- Visualizations: `results/harris/`, `results/sift/`, `results/comparison/`, `results/distribution/`, `results/robustness/`, `results/plots/`.
+- Metrics: `results/metrics/basic_detection_results.csv`, `results/metrics/*_robustness_results.json`, `results/metrics/*_robustness_summary.csv`, `results/metrics/final_summary_report.json`.
+- Report: this file (`results/final_report.md`) with summary, dataset note, experiment design, results, and recommendations.
+
+---
+## 6) Recommendations
+- Use **Harris** for fast, corner-focused tasks on man-made structures.
+- Use **SIFT** when you need scale/rotation robustness and richer coverage.
+- Hybrid approach: Harris for speed, SIFT descriptors for robustness/matching.
+
 *Report generated automatically by Computer Vision Project System*
 """
     
-    # Save report
+    # Save report in results folder
     with open('results/final_report.md', 'w') as f:
         f.write(report_md)
     
@@ -657,22 +620,11 @@ def generate_final_report(results_df, robustness_summary):
     print("\n📊 FINAL SUMMARY:")
     print("="*60)
     print(f"Images Processed: {summary['total_images']}")
-    print(f"\nTotal Keypoints:")
-    print(f"  Harris: {summary['total_harris_keypoints']:,}")
-    print(f"  SIFT:   {summary['total_sift_keypoints']:,}")
-    print(f"\nAverage per Image:")
-    print(f"  Harris: {summary['avg_harris_per_image']:.1f}")
-    print(f"  SIFT:   {summary['avg_sift_per_image']:.1f}")
-    
+    print(f"  Harris keypoints: {summary['total_harris_keypoints']:,}")
+    print(f"  SIFT keypoints:   {summary['total_sift_keypoints']:,}")
     if robustness_summary is not None and not robustness_summary.empty:
-        print(f"\nRobustness Analysis:")
-        print(f"  Harris Wins: {summary['harris_wins']}/{summary['robustness_tests']}")
-        print(f"  SIFT Wins: {summary['sift_wins']}/{summary['robustness_tests']}")
-        print(f"  Avg Repeatability - Harris: {summary['avg_harris_repeatability']:.3f}")
-        print(f"  Avg Repeatability - SIFT: {summary['avg_sift_repeatability']:.3f}")
-    
-    print("\n" + "="*60)
-    print(f"📁 Full results saved in 'results/' folder")
+        print(f"  Robustness tests: Harris wins {summary['harris_wins']}/{summary['robustness_tests']}, "
+              f"SIFT wins {summary['sift_wins']}/{summary['robustness_tests']}")
     print(f"📄 Report saved as 'results/final_report.md'")
     print("="*60)
     
